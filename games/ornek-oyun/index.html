@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Örnek Oyun</title>
+<style>
+  html, body { margin:0; height:100%; background:#14111f; display:flex; align-items:center; justify-content:center; font-family:sans-serif; overflow:hidden; }
+  canvas { background:#1f1a2e; display:block; touch-action:none; }
+  #hint { position:fixed; bottom:10px; left:0; right:0; text-align:center; color:#a89bc4; font-size:12px; font-family:monospace; }
+</style>
+</head>
+<body>
+<canvas id="c" width="640" height="360"></canvas>
+<div id="hint">ZIPLA: SPACE / TIKLA / DOKUN</div>
+<script>
+  // Bu dosya, Astürk Games'e eklenecek bir oyunun nasıl görünmesi gerektiğine dair
+  // minimal bir örnektir. Kendi oyununuzu bu klasörün yerine koyabilirsiniz;
+  // tek şart klasörün içinde bir index.html olması.
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const groundY = H - 40;
+
+  let player = { x: 60, y: groundY - 24, w: 24, h: 24, vy: 0, onGround: true };
+  let obstacles = [];
+  let speed = 5;
+  let score = 0;
+  let gameOver = false;
+  let frame = 0;
+
+  function jump() {
+    if (player.onGround && !gameOver) {
+      player.vy = -11;
+      player.onGround = false;
+    } else if (gameOver) {
+      restart();
+    }
+  }
+
+  function restart() {
+    player.y = groundY - 24;
+    player.vy = 0;
+    player.onGround = true;
+    obstacles = [];
+    speed = 5;
+    score = 0;
+    gameOver = false;
+    frame = 0;
+  }
+
+  window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); jump(); } });
+  canvas.addEventListener('mousedown', jump);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); jump(); });
+
+  function update() {
+    if (gameOver) return;
+    frame++;
+    player.vy += 0.6;
+    player.y += player.vy;
+    if (player.y >= groundY - player.h) {
+      player.y = groundY - player.h;
+      player.vy = 0;
+      player.onGround = true;
+    }
+
+    if (frame % 70 === 0) {
+      obstacles.push({ x: W, y: groundY - 22, w: 16, h: 22 });
+    }
+    obstacles.forEach(o => o.x -= speed);
+    obstacles = obstacles.filter(o => o.x + o.w > 0);
+
+    for (const o of obstacles) {
+      if (player.x < o.x + o.w && player.x + player.w > o.x &&
+          player.y < o.y + o.h && player.y + player.h > o.y) {
+        gameOver = true;
+      }
+    }
+
+    if (frame % 5 === 0) score++;
+    if (frame % 500 === 0) speed += 0.6;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.fillStyle = '#241f38';
+    ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.strokeStyle = '#332b4d';
+    ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(W, groundY); ctx.stroke();
+
+    ctx.fillStyle = '#ffb020';
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+
+    ctx.fillStyle = '#ff3d81';
+    obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
+
+    ctx.fillStyle = '#45e0d0';
+    ctx.font = '16px monospace';
+    ctx.fillText('SKOR: ' + score, 16, 26);
+
+    if (gameOver) {
+      ctx.fillStyle = 'rgba(20,17,31,0.75)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#efe9f7';
+      ctx.textAlign = 'center';
+      ctx.font = '20px monospace';
+      ctx.fillText('OYUN BİTTİ', W / 2, H / 2 - 10);
+      ctx.font = '13px monospace';
+      ctx.fillText('Tekrar başlamak için zıpla', W / 2, H / 2 + 16);
+      ctx.textAlign = 'left';
+    }
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+</script>
+</body>
+</html>

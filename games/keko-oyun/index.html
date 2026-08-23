@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Keko Bird - Sürüm 1.5</title>
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <style>
+        /* --- CSS STİLLERİ --- */
+        body { 
+            margin: 0; padding: 0; width: 100vw; height: 100vh; 
+            background-color: #222; font-family: 'Arial Black', sans-serif; 
+            overflow: hidden; user-select: none; touch-action: none; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+        
+        #game-container { 
+            position: relative; width: 100%; height: 100%; 
+            background-color: #70c5ce; overflow: hidden; 
+        }
+        
+        canvas { 
+            display: block; width: 100%; height: 100%; 
+            transform: translate3d(0,0,0); will-change: transform;
+        }
+
+        .ui-layer { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            pointer-events: none; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 20; 
+            transition: opacity 0.3s ease; 
+        }
+        .hidden { display: none !important; }
+        .fade-out { opacity: 0; pointer-events: none; }
+        
+        #start-screen, #game-over-screen, #shop-screen, #settings-screen, #pause-screen, #about-screen, #warning-screen, #update-screen { 
+            background: rgba(0,0,0,0.85); pointer-events: auto; 
+        }
+        #start-screen { justify-content: flex-start; padding-top: 10vh; }
+        #splash-screen { background-color: #000; z-index: 100; pointer-events: auto; }
+        #warning-screen { z-index: 150; }
+        #update-screen { z-index: 160; } /* Yenilikler ekranı en üstte çıksın */
+
+        h1 { color: #f4bd39; font-size: 7vh; text-shadow: 4px 4px 0 #000; margin: 0 0 2vh 0; text-align: center; line-height: 1.1; }
+        #game-over-screen h1, #pause-screen h1 { color: #ff5252; font-size: 5vw; max-font-size: 30px; margin-bottom: 4vh; padding: 0 20px; }
+        
+        @keyframes floatBird {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        #menu-bird-display {
+            width: 12vh; height: auto; margin-bottom: 2vh;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); 
+            animation: floatBird 2s ease-in-out infinite; 
+            will-change: transform; 
+        }
+
+        /* Genel Buton Stili */
+        button { 
+            padding: 1.5vh 4vw; font-size: 2.2vh; color: white; border: 3px solid #fff; 
+            cursor: pointer; border-radius: 12px; text-transform: uppercase; 
+            font-family: 'Arial Black', sans-serif; margin: 0.8vh; 
+            transition: transform 0.1s; pointer-events: auto; min-width: 180px; 
+            background: #e05513; box-shadow: 0 0.6vh 0 #8a3208;
+        }
+        button:active { transform: translateY(0.5vh); box-shadow: none !important; }
+        
+        /* --- RESİMLİ BUTONLAR (ANA MENÜ) --- */
+        #btn-start, #btn-market, #btn-settings, #btn-about {
+            background-color: transparent !important; border: none !important; box-shadow: none !important;
+            display: flex; justify-content: center; align-items: center;
+            text-shadow: 2px 2px 0 #000; background-repeat: no-repeat; background-position: center;
+            min-height: 70px; min-width: 200px;
+        }
+        #btn-start:active, #btn-market:active, #btn-settings:active, #btn-about:active { transform: scale(0.95); }
+
+        #btn-start { background-image: url('baslama_butonu.png'); background-size: 160% 120%; }
+        #btn-market { background-image: url('market_butonu.png'); background-size: 137% 150%; }
+        #btn-settings { background-image: url('ayarlar_butonu.png'); background-size: 137% 150%; }
+        #btn-about { background-image: url('eg_butonu.png'); background-size: 137% 150%; }
+
+        /* --- GERİ DÖN BUTONLARI --- */
+        #btn-back-settings, #btn-back-shop, #btn-back-about {
+            background-color: transparent !important; border: none !important; box-shadow: none !important;
+            display: flex; justify-content: center; align-items: center;
+            text-shadow: 2px 2px 0 #000; background-repeat: no-repeat; background-position: center;
+            min-height: 60px; min-width: 180px;
+        }
+        #btn-back-settings:active, #btn-back-shop:active, #btn-back-about:active { transform: scale(0.95); }
+
+        #btn-back-settings { background-image: url('Ayarlar_gr.png'); background-size: 150% 280%; }
+        #btn-back-shop { background-image: url('Market_gr.png'); background-size: 150% 300%; }
+        #btn-back-about { background-image: url('Emek_gr.png'); background-size: 150% 300%; }
+
+        /* --- KAYBETME EKRANI BUTONLARI --- */
+        #btn-retry, #btn-home-over, #btn-market-over {
+            background-color: transparent !important; border: none !important; box-shadow: none !important;
+            display: flex; justify-content: center; align-items: center;
+            text-shadow: 2px 2px 0 #000; background-repeat: no-repeat; background-position: center;
+            min-height: 60px; min-width: 180px;
+        }
+        #btn-retry:active, #btn-home-over:active, #btn-market-over:active { transform: scale(0.95); }
+
+        #btn-retry { background-image: url('kb_tekrar.png'); background-size: 137% 150%; }
+        #btn-home-over { background-image: url('kb_mn.png'); background-size: 137% 150%; }
+        #btn-market-over { background-image: url('kb_mt.png'); background-size: 137% 150%; }
+
+        /* --- DURAKLATMA MENÜSÜ BUTONLARI (YENİ) --- */
+        #btn-resume, #btn-home-pause {
+            background-color: transparent !important; border: none !important; box-shadow: none !important;
+            display: flex; justify-content: center; align-items: center;
+            text-shadow: 2px 2px 0 #000; background-repeat: no-repeat; background-position: center;
+            min-height: 60px; min-width: 180px;
+        }
+        #btn-resume:active, #btn-home-pause:active { transform: scale(0.95); }
+
+        /* Devam Et */
+        #btn-resume { background-image: url('dr_dr.png'); background-size: 137% 100%; }
+        
+        /* Menüye Dön (Pause) */
+        #btn-home-pause { background-image: url('dr_mn.png'); background-size: 137% 150%; }
+
+        /* --- DURDURMA BUTONU (OYUN İÇİ) --- */
+        #pause-btn { 
+            top: 80px; left: 20px; 
+            background-color: transparent !important; 
+            border: none !important; 
+            box-shadow: none !important; 
+            border-radius: 0 !important;
+            background-image: url('Durdurma_bt.png');
+            background-size: 150% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: block; 
+            z-index: 30;
+            width: 60px; height: 60px; 
+        }
+        #pause-btn:active { transform: scale(0.95); }
+
+        /* Diğer Renkli Butonlar */
+        .btn-green { background: #4caf50; box-shadow: 0 0.6vh 0 #2e7d32; }
+        .btn-blue { background: #2196F3; box-shadow: 0 0.6vh 0 #0b5fa5; }
+        .btn-gray { background: #607D8B; box-shadow: 0 0.6vh 0 #455A64; }
+        
+        .icon-btn { position: absolute; width: 50px; height: 50px; cursor: pointer; z-index: 50; transition: transform 0.1s; pointer-events: auto; }
+        .icon-btn:active { transform: scale(0.9); }
+        .icon-btn img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 0 rgba(0,0,0,0.5)); }
+        
+        #discord-btn { bottom: 100px; right: 20px; width: 60px; height: 60px; }
+        #instagram-btn { bottom: 100px; right: 90px; width: 60px; height: 60px; }
+        #flow-btn { bottom: 100px; right: 160px; width: 60px; height: 60px; }
+
+        /* --- BİLGİ BUTONU (SOL ÜST) --- */
+        #info-btn { top: 80px; left: 20px; width: 50px; height: 50px; z-index: 40;}
+        .info-circle {
+            background: #e05513; color: white; border: 3px solid white;
+            border-radius: 50%; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 30px; font-weight: bold; box-shadow: 0 4px 0 #8a3208;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .box-panel { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; text-align: center; width: 85%; max-width: 400px; border: 2px solid rgba(255,255,255,0.2); margin-bottom: 20px; }
+        .hud-score { position: absolute; top: 20px; font-size: 20px; color: #fff; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 20px; border: 2px solid #fff; z-index: 15; font-weight: bold; }
+        #total-coins-display { right: 20px; color: #ffeb3b; display: flex; align-items: center; gap: 5px; } 
+        #high-score-display { left: 20px; }
+        #score-board { position: absolute; top: 10%; width: 100%; text-align: center; font-size: 8vh; color: white; text-shadow: 4px 4px 0 #000; z-index: 10; pointer-events: none; }
+
+        .setting-item { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; width: 100%; }
+        .setting-label { color:white; font-size: 2vh; margin-bottom: 5px; text-shadow: 1px 1px 0 #000; }
+        input[type=range] { -webkit-appearance: none; width: 90%; height: 10px; background: #ddd; border-radius: 5px; outline: none; border: 2px solid #543847; margin-top: 10px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; background: #e05513; cursor: pointer; border-radius: 50%; border: 2px solid #fff; }
+
+        .shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2vh; max-height: 50vh; overflow-y: auto; padding: 2vh; background: rgba(255,255,255,0.1); border-radius: 15px; width: 90%; max-width: 600px; }
+        .shop-item { background: #ded895; border: 3px solid #543847; border-radius: 10px; padding: 1vh; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .shop-item img { width: 80%; height: auto; object-fit: contain; margin-bottom: 1vh; }
+        .selected-badge { position: absolute; top: -10px; right: -10px; background: #f44336; color: white; width: 30px; height: 30px; line-height: 30px; text-align: center; border-radius: 50%; border: 2px solid white; display: none; z-index: 5; font-weight: bold; }
+        .shop-item.active { border-color: #f44336; box-shadow: 0 0 15px #f44336; }
+        .shop-item.active .selected-badge { display: block; }
+
+        .splash-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #222; z-index: -1; }
+        #splash-screen img { width: 50%; max-width: 250px; margin-bottom: 30px; animation: breathe 3s infinite ease-in-out; }
+        .loader-container { width: 60%; max-width: 300px; height: 10px; background-color: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.3); }
+        .loader-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #e05513, #f4bd39); border-radius: 10px; transition: width 0.2s ease-out; }
+
+        .role-title { color: #f4bd39; font-size: 2.5vh; font-weight: bold; margin-bottom: 5px; text-decoration: underline; text-shadow: 2px 2px 0 #000; }
+        .name { color: white; font-size: 2.5vh; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+        
+        .version-text {
+            position: fixed; 
+            bottom: 20px;    
+            left: 20px;
+            color: #ffffff; 
+            font-size: 1.8vh; 
+            font-family: 'Arial Black', sans-serif;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 3px 3px 0 #000;
+            z-index: 99999;
+        }
+
+        .coin-icon {
+            width: 30px;
+            height: auto;
+            vertical-align: middle;
+            filter: drop-shadow(0 2px 0 rgba(0,0,0,0.5));
+        }
+
+        @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="total-coins-display" class="hud-score">
+            <img src="50kuruş1.png" class="coin-icon" alt="Para"> 
+            <span id="total-coins">0</span>
+        </div>
+        
+        <div id="high-score-display" class="hud-score">🏆 <span id="high-score">0</span></div>
+        <div id="score-board">0</div>
+
+        <div id="pause-btn" class="icon-btn hidden" onclick="togglePause()"></div>
+
+        <div id="info-btn" class="icon-btn hidden" onclick="openWarning()">
+            <div class="info-circle">!</div>
+        </div>
+
+        <div id="splash-screen" class="ui-layer">
+            <div class="splash-bg"></div>
+            <img src="logo.png" alt="Logo" onerror="this.style.display='none'">
+            <div class="loader-container"><div class="loader-bar" id="loader-bar"></div></div>
+            <div class="loading-text" id="loading-text">YÜKLENİYOR...</div>
+        </div>
+
+        <div id="start-screen" class="ui-layer hidden">
+            <h1>KEKO<br>BİRD</h1>
+            <img id="menu-bird-display" src="kus1.png" alt="Seçili Karakter">
+            
+            <button id="btn-start" onclick="startGame()">BAŞLA</button>
+            <button id="btn-market" onclick="openShop()">MARKET 🛒</button>
+            <button id="btn-settings" onclick="openSettings()">AYARLAR ⚙️</button>
+            <button id="btn-about" onclick="openAbout()">EMEGİ GEÇENLER 📋</button>
+            
+            <div class="version-text">Sürüm 1.5 Erken Erişim</div>
+        </div>
+        
+        <a href="https://discord.gg/la-town-835857029426839572" target="_blank" class="icon-btn" id="discord-btn">
+            <img src="discord.png" alt="Discord" onerror="this.style.display='none'">
+        </a>
+        <a href="https://www.instagram.com/asturk_game?igsh=eDVpNGljbnUxNDk=" target="_blank" class="icon-btn" id="instagram-btn">
+            <img src="instagram.png" alt="Instagram" onerror="this.style.display='none'">
+        </a>
+        <a href="https://play.google.com/store/apps/details?id=flow.arrows&pcampaignid=web_share" target="_blank" class="icon-btn" id="flow-btn">
+            <img src="flow.png" alt="Flow Arrows" onerror="this.style.display='none'">
+        </a>
+
+        <div id="update-screen" class="ui-layer hidden">
+            <h1 style="font-size: 5vh; color: #4caf50; margin-bottom: 2vh;">YENİLİKLER</h1>
+            <div class="box-panel" style="font-size: 2.2vh; color: white; line-height: 1.5; font-family: 'Arial Black', sans-serif; text-align: left;">
+                <ul style="padding-left: 20px; margin: 0;">
+                    <li style="margin-bottom: 10px;">Yüksek hz de oyunun hızlanma sorunu çözüldü.</li>
+                    <li>Bildirmiş olduğunuz hatalar giderildi.</li>
+                </ul>
+            </div>
+            <button class="btn-green" onclick="closeUpdate()">DEVAM ET</button>
+        </div>
+
+        <div id="warning-screen" class="ui-layer hidden">
+            <h1 style="font-size: 5vh; color: #f4bd39; margin-bottom: 2vh;">BİLGİLENDİRME</h1>
+            <div class="box-panel" style="font-size: 2.2vh; color: white; line-height: 1.5; font-family: 'Arial Black', sans-serif;">
+                Oyunumuz daha erken erişim olduğu için hatalarla karşılaşmanız normal.<br><br>
+                Hataları ve düşüncelerinizi bize Instagram'dan iletmeyi unutmayın!
+            </div>
+            <button class="btn-green" onclick="closeWarning()">ANLADIM</button>
+        </div>
+
+        <div id="pause-screen" class="ui-layer hidden">
+            <h1 id="txt-pause-title">BAŞARAMADIK ABİ</h1>
+            <button id="btn-resume" onclick="togglePause()">DEVAM ET ▶</button>
+            <button id="btn-home-pause" onclick="resetGame()">MENÜYE DÖN 🏠</button>
+        </div>
+
+        <div id="settings-screen" class="ui-layer hidden">
+            <h1 id="txt-settings-title">AYARLAR</h1>
+            <div class="box-panel">
+                <div class="setting-item">
+                    <div id="lbl-sfx" class="setting-label">ZIPLAMA SESİ</div>
+                    <button id="sfx-btn" class="btn-green" onclick="toggleJumpMute()">AÇIK 🔊</button>
+                    <input type="range" id="slider-jump" min="0" max="1" step="0.1" value="1" oninput="setJumpVolume(this.value)">
+                </div>
+                <div class="setting-item">
+                    <div id="lbl-sound" class="setting-label">ÖLÜM SESİ</div>
+                    <button id="sound-btn" class="btn-green" onclick="toggleDeathMute()">AÇIK 🔊</button>
+                    <input type="range" id="slider-death" min="0" max="1" step="0.1" value="1" oninput="setDeathVolume(this.value)">
+                </div>
+                <div class="setting-item">
+                    <div id="lbl-lang" class="setting-label">DİL / LANGUAGE</div>
+                    <button id="lang-btn" class="btn-blue" onclick="toggleLanguage()">TÜRKÇE 🇹🇷</button>
+                </div>
+            </div>
+            <button id="btn-back-settings" onclick="closeSettings()">GERİ DÖN</button>
+        </div>
+
+        <div id="about-screen" class="ui-layer hidden">
+            <h1 id="txt-team-title">EKİP</h1>
+            <div class="box-panel">
+                <div id="lbl-producer" class="role-title">YAPIMCI</div>
+                <div class="name">Yusuf Ayan</div>
+            </div>
+            <button id="btn-back-about" onclick="closeAbout()">GERİ DÖN</button>
+        </div>
+
+        <div id="game-over-screen" class="ui-layer hidden">
+            <h1 id="txt-gameover-title">BAŞARAMADIK ABİ</h1>
+            <div class="box-panel">
+                <div id="lbl-score" style="color:#e05513; font-size:1.5vh;">BU TUR SKORU</div>
+                <div style="font-size:5vh; color:#fff;" id="final-score">0</div>
+                <div style="margin:10px 0; border-bottom:2px dashed #543847;"></div>
+                <div id="lbl-total-coins" style="color:#e05513; font-size:1.5vh;">TOPLAM 50 KURUŞUN</div>
+                
+                <div style="font-size:3vh; color:#fff; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                    <img src="50kuruş2.png" class="coin-icon" alt="Para"> 
+                    <span id="final-total-coins">0</span>
+                </div>
+                
+            </div>
+            <button id="btn-retry" onclick="retryGame()">TEKRAR</button>
+            <button id="btn-home-over" class="btn-gray" onclick="resetGame()">MENÜYE DÖN 🏠</button>
+            <button id="btn-market-over" class="btn-green" onclick="openShop()">MARKET 🛒</button>
+        </div>
+
+        <div id="shop-screen" class="ui-layer hidden">
+            <h1 id="txt-shop-title">KUŞLAR</h1>
+            <div style="color:white; margin-bottom:2vh;"><span id="lbl-shop-coins">50 KURUŞLARIN:</span> <span id="shop-coins">0</span></div>
+            <div class="shop-grid" id="shop-container"></div>
+            <button id="btn-back-shop" onclick="closeShop()">GERİ DÖN</button>
+        </div>
+    </div>
+
+    <script>
+        const UI = {
+            canvas: document.getElementById('gameCanvas'),
+            discordBtn: document.getElementById('discord-btn'),
+            instagramBtn: document.getElementById('instagram-btn'),
+            flowBtn: document.getElementById('flow-btn'),
+            infoBtn: document.getElementById('info-btn'),
+            pauseBtn: document.getElementById('pause-btn'),
+            menuBird: document.getElementById('menu-bird-display'),
+            screens: {
+                splash: document.getElementById('splash-screen'),
+                start: document.getElementById('start-screen'),
+                gameOver: document.getElementById('game-over-screen'),
+                shop: document.getElementById('shop-screen'),
+                settings: document.getElementById('settings-screen'),
+                pause: document.getElementById('pause-screen'),
+                about: document.getElementById('about-screen'),
+                warning: document.getElementById('warning-screen'),
+                update: document.getElementById('update-screen') // Yeni Ekran eklendi
+            },
+            text: {
+                totalCoins: document.getElementById('total-coins'),
+                highScore: document.getElementById('high-score'),
+                scoreBoard: document.getElementById('score-board'),
+                finalScore: document.getElementById('final-score'),
+                finalTotalCoins: document.getElementById('final-total-coins'),
+                shopCoins: document.getElementById('shop-coins'),
+                loaderBar: document.getElementById('loader-bar'),
+                loadingText: document.getElementById('loading-text')
+            },
+            settings: {
+                soundBtn: document.getElementById('sound-btn'),
+                sfxBtn: document.getElementById('sfx-btn'),
+                sliderJump: document.getElementById('slider-jump'),
+                sliderDeath: document.getElementById('slider-death'),
+                langBtn: document.getElementById('lang-btn')
+            }
+        };
+
+        const ctx = UI.canvas.getContext('2d', { alpha: false });
+        
+        let hitSound = new Audio();
+        let jumpSound = new Audio();
+
+        // FPS Sabitleyici Değişkenler
+        let lastTime = 0;
+        const fpsInterval = 1000 / 60; // Saniyede 60 Kare (60 FPS) sabitlendi
+
+        let settings = {
+            isJumpMuted: localStorage.getItem('isJumpMuted') === 'true',
+            isDeathMuted: localStorage.getItem('isDeathMuted') === 'true',
+            jumpVolume: parseFloat(localStorage.getItem('jumpVolume')) || 1.0,
+            deathVolume: parseFloat(localStorage.getItem('deathVolume')) || 1.0,
+            lang: localStorage.getItem('flappyLang') || 'tr'
+        };
+
+        const birdsData = [
+            { id: 0, name: "genç keko", price: 0, src: "kus1.png" },
+            { id: 1, name: "yaşlı keko", price: 20, src: "kus2.png" },
+            { id: 2, name: "dayı keko", price: 50, src: "kus3.png" },
+            { id: 3, name: "havalı keko", price: 100, src: "kus4.png" },
+            { id: 4, name: "bedel adam", price: 150, src: "kus5.png" },
+            { id: 5, name: "tırrek", price: 200, src: "kus6.png" },
+            { id: 6, name: "dızzcı", price: 250, src: "kus7.png" },
+            { id: 7, name: "zengin göt", price: 300, src: "kus8.png" }
+        ];
+
+        let state = {
+            frames: 0,
+            score: 0,
+            totalCoins: parseInt(localStorage.getItem('flappyTotalCoins')) || 0,
+            highScore: parseInt(localStorage.getItem('flappyHighScore')) || 0,
+            unlockedBirds: JSON.parse(localStorage.getItem('flappyUnlockedBirds')) || [true, false, false, false, false, false, false, false],
+            selectedBird: parseInt(localStorage.getItem('flappySelectedBird')) || 0,
+            isRunning: false,
+            isGameOver: false,
+            isPaused: false
+        };
+
+        UI.text.highScore.innerText = state.highScore;
+        UI.text.totalCoins.innerText = state.totalCoins;
+
+        const bgImg = new Image(); 
+        const birdImg = new Image();
+        const pipeImg = new Image(); 
+
+        const translations = {
+            tr: {
+                start: "BAŞLA", market: "MARKET 🛒", settings: "AYARLAR ⚙️", settingsTitle: "AYARLAR", soundLabel: "ÖLÜM SESİ", sfxLabel: "ZIPLAMA SESİ", langLabel: "DİL / LANGUAGE", soundOn: "AÇIK 🔊", soundOff: "KAPALI 🔇", back: "GERİ DÖN", failTitle: "BAŞARAMADIK ABİ", scoreLabel: "BU TUR SKORU", totalCoinsLabel: "TOPLAM 50 KURUŞUN ", retry: "TEKRAR", menuHome: "MENÜYE DÖN 🏠", resume: "DEVAM ET ▶", shopTitle: "KUŞLAR", shopCoins: "50 KURUŞLARIN:", buy: "SATIN AL", select: "SEÇ", selected: "SEÇİLDİ", loading1: "MEKAN HAZIRLANIYOR...", loading2: "ZARLAR ATILIYOR...", teamTitle: "EKİP", producer: "YAPIMCI", about: "EMEGİ GEÇENLER 📋"
+            },
+            en: {
+                start: "START", market: "SHOP 🛒", settings: "SETTINGS ⚙️", settingsTitle: "SETTINGS", soundLabel: "DEATH SOUND", sfxLabel: "JUMP SOUND", langLabel: "LANGUAGE / DİL", soundOn: "ON 🔊", soundOff: "OFF 🔇", back: "BACK", failTitle: "MISSION FAILED", scoreLabel: "SCORE", totalCoinsLabel: "TOTAL CASH", retry: "RETRY", menuHome: "MAIN MENU 🏠", resume: "RESUME ▶", shopTitle: "BIRDS", shopCoins: "Cash:", buy: "BUY", select: "SELECT", selected: "SELECTED", loading1: "PREPARING...", loading2: "ROLLING DICE...", teamTitle: "TEAM", producer: "DEVELOPER", about: "CREDITS 📋"
+            }
+        };
+
+        const assetSources = [
+            { type: 'img', src: 'arkaplan.png' },
+            { type: 'img', src: 'boru.png' },
+            { type: 'img', src: 'logo.png', optional: true },
+            { type: 'img', src: 'Durdurma_bt.png', optional: true },
+            { type: 'img', src: 'discord.png', optional: true },
+            { type: 'img', src: 'instagram.png', optional: true },
+            { type: 'img', src: 'flow.png', optional: true },
+            { type: 'img', src: 'baslama_butonu.png', optional: true },
+            { type: 'img', src: 'market_butonu.png', optional: true },
+            { type: 'img', src: 'ayarlar_butonu.png', optional: true },
+            { type: 'img', src: 'eg_butonu.png', optional: true },
+            { type: 'img', src: 'Ayarlar_gr.png', optional: true },
+            { type: 'img', src: 'Market_gr.png', optional: true },
+            { type: 'img', src: 'Emek_gr.png', optional: true },
+            { type: 'img', src: 'kb_tekrar.png', optional: true },
+            { type: 'img', src: 'kb_mn.png', optional: true },
+            { type: 'img', src: 'kb_mt.png', optional: true },
+            { type: 'img', src: 'dr_dr.png', optional: true },
+            { type: 'img', src: 'dr_mn.png', optional: true },
+            
+            { type: 'img', src: 'kus1.png' },
+            { type: 'img', src: 'kus2.png' },
+            { type: 'img', src: 'kus3.png' },
+            { type: 'img', src: 'kus4.png' },
+            { type: 'img', src: 'kus5.png' },
+            { type: 'img', src: 'kus6.png' },
+            { type: 'img', src: 'kus7.png' },
+            { type: 'img', src: 'kus8.png' },
+            { type: 'audio', src: 'ses.mp3', obj: hitSound, optional: true },
+            { type: 'audio', src: 'dokunma.mp3', obj: jumpSound, optional: true }
+        ];
+
+        let loadedCount = 0;
+        const totalAssets = assetSources.length;
+        let gameStarted = false; 
+
+        function handleSplash() {
+            resizeCanvas();
+            UI.discordBtn.classList.add('hidden'); 
+            UI.instagramBtn.classList.add('hidden');
+            UI.flowBtn.classList.add('hidden');
+            UI.infoBtn.classList.add('hidden');
+            updateTexts();
+
+            assetSources.forEach(asset => {
+                if (asset.type === 'img') {
+                    const img = new Image();
+                    img.onload = () => { checkProgress(asset.src, true); };
+                    img.onerror = () => { 
+                        console.warn(asset.src + " yüklenemedi, ama devam ediliyor.");
+                        checkProgress(asset.src, false); 
+                    };
+                    img.src = asset.src;
+                    
+                    if(asset.src === 'arkaplan.png') bgImg.src = asset.src;
+                    if(asset.src === 'boru.png') pipeImg.src = asset.src; 
+                    if(asset.src === birdsData[state.selectedBird].src) birdImg.src = asset.src;
+                } 
+                else if (asset.type === 'audio') {
+                    if(asset.obj) {
+                        asset.obj.src = asset.src;
+                        asset.obj.oncanplaythrough = () => { checkProgress(asset.src, true); asset.obj.oncanplaythrough = null; };
+                        asset.obj.onerror = () => { 
+                            console.warn(asset.src + " ses dosyası bulunamadı.");
+                            checkProgress(asset.src, false); 
+                        };
+                        asset.obj.load(); 
+                    } else {
+                        checkProgress(asset.src, true);
+                    }
+                }
+            });
+
+            setTimeout(() => {
+                if (!gameStarted) {
+                    console.log("Zaman aşımı! Oyun zorla başlatılıyor...");
+                    startActualGame();
+                }
+            }, 5000);
+        }
+
+        function checkProgress(src, success) {
+            loadedCount++;
+            const percent = Math.floor((loadedCount / totalAssets) * 100);
+            
+            if (UI.text.loaderBar) UI.text.loaderBar.style.width = percent + '%';
+            
+            const t = translations[settings.lang];
+            if (percent > 30) UI.text.loadingText.innerText = t.loading1;
+            if (percent > 70) UI.text.loadingText.innerText = t.loading2;
+
+            if (loadedCount >= totalAssets) {
+                setTimeout(startActualGame, 200);
+            }
+        }
+
+        function startActualGame() {
+            if (gameStarted) return;
+            gameStarted = true;
+
+            resetGame(true); 
+            UI.screens.splash.classList.add('fade-out');
+            setTimeout(() => {
+                UI.screens.splash.classList.add('hidden');
+                UI.screens.start.classList.remove('hidden');
+                UI.discordBtn.classList.remove('hidden');
+                UI.instagramBtn.classList.remove('hidden');
+                UI.flowBtn.classList.remove('hidden');
+                UI.infoBtn.classList.remove('hidden');
+                updateBirdImage(); 
+                
+                // YENİ: Sürüm kontrolü ve Güncelleme Notları Gösterimi
+                const currentVersion = '1.5';
+                const savedVersion = localStorage.getItem('kekoBirdVersion');
+                
+                if (savedVersion !== currentVersion) {
+                    // Kullanıcı güncellemeyi ilk defa açıyor
+                    localStorage.setItem('kekoBirdVersion', currentVersion);
+                    openUpdate();
+                } else {
+                    // Daha önce güncelleme notlarını görmüş, direkt uyarı ekranını aç
+                    openWarning();
+                }
+                
+            }, 500);
+        }
+
+        // YENİ EKLENEN GÜNCELLEME EKRANI FONKSİYONLARI
+        function openUpdate() { UI.screens.update.classList.remove('hidden'); }
+        function closeUpdate() { 
+            UI.screens.update.classList.add('hidden'); 
+            // Yenilikler ekranı kapandıktan sonra standart erken erişim uyarısını da göster
+            openWarning(); 
+        }
+
+        function openWarning() { UI.screens.warning.classList.remove('hidden'); }
+        function closeWarning() { UI.screens.warning.classList.add('hidden'); }
+
+        function resizeCanvas() { 
+            UI.canvas.width = window.innerWidth; 
+            UI.canvas.height = window.innerHeight; 
+            pipes.h = UI.canvas.height * 0.8; 
+        }
+
+        function updateBirdImage() { 
+            birdImg.src = birdsData[state.selectedBird].src;
+            if(UI.menuBird) UI.menuBird.src = birdsData[state.selectedBird].src;
+        }
+
+        function toggleLanguage() { settings.lang = settings.lang === 'tr' ? 'en' : 'tr'; localStorage.setItem('flappyLang', settings.lang); updateTexts(); }
+        function toggleDeathMute() { settings.isDeathMuted = !settings.isDeathMuted; localStorage.setItem('isDeathMuted', settings.isDeathMuted); updateTexts(); }
+        function toggleJumpMute() { settings.isJumpMuted = !settings.isJumpMuted; localStorage.setItem('isJumpMuted', settings.isJumpMuted); updateTexts(); }
+        function setJumpVolume(val) { settings.jumpVolume = val; if(jumpSound) jumpSound.volume = val; localStorage.setItem('jumpVolume', val); }
+        function setDeathVolume(val) { settings.deathVolume = val; if(hitSound) hitSound.volume = val; localStorage.setItem('deathVolume', val); }
+
+        function updateTexts() {
+            const t = translations[settings.lang];
+            const ids = {
+                'btn-start': t.start, 'btn-market': t.market, 'btn-settings': t.settings, 'txt-settings-title': t.settingsTitle,
+                'lbl-sound': t.soundLabel, 'lbl-sfx': t.sfxLabel, 'lbl-lang': t.langLabel, 'btn-back-settings': t.back,
+                'txt-gameover-title': t.failTitle, 'txt-pause-title': t.failTitle, 'lbl-score': t.scoreLabel,
+                'lbl-total-coins': t.totalCoinsLabel, 'btn-retry': t.retry, 'btn-market-over': t.market, 'btn-resume': t.resume,
+                'btn-home-pause': t.menuHome, 'btn-home-over': t.menuHome,
+                'txt-shop-title': t.shopTitle, 'lbl-shop-coins': t.shopCoins, 'btn-back-shop': t.back,
+                'btn-about': t.about, 'txt-team-title': t.teamTitle, 'lbl-producer': t.producer, 'btn-back-about': t.back
+            };
+            for (const [id, text] of Object.entries(ids)) { const el = document.getElementById(id); if (el) el.innerText = text; }
+
+            UI.settings.langBtn.innerText = settings.lang === 'tr' ? "TÜRKÇE 🇹🇷" : "ENGLISH 🇺🇸";
+            UI.settings.soundBtn.innerText = settings.isDeathMuted ? t.soundOff : t.soundOn;
+            UI.settings.soundBtn.className = settings.isDeathMuted ? "btn-gray" : "btn-green";
+            UI.settings.sfxBtn.innerText = settings.isJumpMuted ? t.soundOff : t.soundOn;
+            UI.settings.sfxBtn.className = settings.isJumpMuted ? "btn-gray" : "btn-green";
+            if (!UI.screens.shop.classList.contains('hidden')) renderShopItems();
+        }
+
+        const GRAVITY = 0.25;
+        let currentSpeed = 2;
+
+        const bird = {
+            x: 50, y: 150, w: 60, h: 48, velocity: 0, jumpStrength: 5.5,
+            draw: function() {
+                const drawX = Math.floor(this.x); const drawY = Math.floor(this.y);
+                if (birdImg.complete && birdImg.naturalHeight !== 0) {
+                    ctx.save(); ctx.translate(drawX + this.w/2, drawY + this.h/2);
+                    let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.velocity * 0.1)));
+                    ctx.rotate(rotation); ctx.drawImage(birdImg, -this.w/2, -this.h/2, this.w, this.h); ctx.restore();
+                } else {
+                    ctx.fillStyle = "#ffeb3b"; ctx.fillRect(drawX, drawY, this.w, this.h);
+                    ctx.strokeStyle = "#000"; ctx.strokeRect(drawX, drawY, this.w, this.h);
+                }
+            },
+            update: function() {
+                this.velocity += GRAVITY; this.y += this.velocity;
+                if (this.y + this.h >= UI.canvas.height - fg.h) { 
+                    this.y = UI.canvas.height - fg.h - this.h; 
+                    if(hitSound && !settings.isDeathMuted && hitSound.readyState >= 2) hitSound.play().catch(e => {}); 
+                    gameOver(); 
+                }
+                if (this.y < 0) { this.y = 0; this.velocity = 0; }
+            },
+            jump: function() {
+                if(state.isGameOver) return;
+                this.velocity = -this.jumpStrength;
+                if(jumpSound && !settings.isJumpMuted && jumpSound.readyState >= 2) { jumpSound.currentTime = 0; jumpSound.play().catch(e => {}); }
+            }
+        };
+
+        const pipes = {
+            position: [], w: 400, h: 600, gap: 150, dx: currentSpeed,
+            draw: function() {
+                for(let i=0; i<this.position.length; i++){
+                    let p=this.position[i], topY=p.y, botY=p.y+this.h+this.gap;
+                    let drawX = Math.floor(p.x);
+                    
+                    ctx.save();
+                    ctx.translate(drawX + this.w/2, topY + this.h/2);
+                    ctx.scale(1, -1);
+                    if(pipeImg.complete && pipeImg.naturalHeight !== 0) {
+                        ctx.drawImage(pipeImg, -this.w/2, -this.h/2, this.w, this.h);
+                    } else {
+                        ctx.fillStyle = "#555"; ctx.fillRect(-this.w/2, -this.h/2, this.w, this.h);
+                    }
+                    ctx.restore();
+
+                    if(pipeImg.complete && pipeImg.naturalHeight !== 0) {
+                        ctx.drawImage(pipeImg, drawX, botY, this.w, this.h);
+                    } else {
+                        ctx.fillStyle = "#555"; ctx.fillRect(drawX, botY, this.w, this.h);
+                    }
+                }
+            },
+            update: function() {
+                if(state.score < 3) currentSpeed = 2;            
+                else if(state.score < 10) currentSpeed = 3;      
+                else if(state.score < 20) currentSpeed = 3.5;    
+                else if(state.score < 40) currentSpeed = 4.5;    
+                else currentSpeed = 5;                           
+
+                this.dx = currentSpeed;
+                let spawnRate = Math.floor(110 * (3 / currentSpeed));
+
+                if(state.frames % spawnRate === 0) {
+                    let minY = -this.h + 50, maxY = -100 - this.gap;
+                    this.position.push({ x: UI.canvas.width, y: Math.floor(Math.random() * (maxY - minY + 1) + minY), passed: false });
+                }
+                for(let i=0; i<this.position.length; i++){
+                    let p=this.position[i]; p.x -= this.dx;
+
+                    let tolerance = 175; 
+                    let hitX = bird.x + 10;
+                    let hitY = bird.y + 10;
+                    let hitW = bird.w - 20;
+                    let hitH = bird.h - 20;
+                    
+                    if (hitX + hitW > p.x + tolerance && hitX < p.x + this.w - tolerance) {
+                        let verticalTolerance = 5; 
+                        if (hitY < p.y + this.h - verticalTolerance || hitY + hitH > p.y + this.h + this.gap + verticalTolerance) {
+                            if(hitSound && !settings.isDeathMuted && hitSound.readyState >= 2) hitSound.play().catch(e => {});
+                            gameOver();
+                        }
+                    }
+
+                    if(p.x + this.w - tolerance < bird.x && !p.passed) { 
+                        state.score++; 
+                        UI.text.scoreBoard.innerText = state.score; 
+                        p.passed = true; 
+                    }
+                    
+                    if(p.x + this.w <= -50) { this.position.shift(); i--; }
+                }
+            },
+            reset: function() { this.position = []; }
+        };
+
+        const fg = {
+            h: 100, x: 0,
+            draw: function() {
+                ctx.fillStyle="rgba(150, 145, 100, 1)"; ctx.fillRect(0, UI.canvas.height-this.h, UI.canvas.width, this.h);
+                ctx.fillStyle="#555"; ctx.fillRect(0, UI.canvas.height-this.h, UI.canvas.width, 15);
+                ctx.strokeStyle="#777"; ctx.lineWidth=2; ctx.beginPath();
+                let step = 40; for(let i=0; i<UI.canvas.width/step + 2; i++) { ctx.moveTo(this.x+(i*step), UI.canvas.height-this.h+15); ctx.lineTo(this.x+(i*step)-15, UI.canvas.height); }
+                ctx.stroke();
+            },
+            update: function() { 
+                if(state.isRunning) this.x = (this.x - currentSpeed) % 40; 
+            }
+        };
+
+        // GÜNCELLENMİŞ OYUN DÖNGÜSÜ
+        function loop(timestamp) {
+            if (!state.isRunning || state.isPaused) return;
+
+            if (!timestamp) timestamp = performance.now();
+            let elapsed = timestamp - lastTime;
+
+            if (elapsed > fpsInterval) {
+                // Kalan zamanı sıfırlayarak drifti engelle
+                lastTime = timestamp - (elapsed % fpsInterval);
+
+                bird.update(); fg.update(); pipes.update();
+                if (bgImg.complete) ctx.drawImage(bgImg, 0, 0, UI.canvas.width, UI.canvas.height);
+                else { ctx.fillStyle = "#70c5ce"; ctx.fillRect(0, 0, UI.canvas.width, UI.canvas.height); }
+                pipes.draw(); fg.draw(); bird.draw();
+                state.frames++;
+            }
+            if(!state.isGameOver) requestAnimationFrame(loop);
+        }
+
+        // GÜNCELLENMİŞ DURAKLATMA MANTIĞI
+        function togglePause() {
+            if (!state.isRunning || state.isGameOver) return;
+            state.isPaused = !state.isPaused;
+            if (state.isPaused) {
+                UI.screens.pause.classList.remove('hidden');
+            } else { 
+                UI.screens.pause.classList.add('hidden'); 
+                lastTime = performance.now(); // Oyuna dönünce zamanlayıcıyı sıfırla
+                requestAnimationFrame(loop); 
+            }
+        }
+
+        // GÜNCELLENMİŞ OYUN BAŞLATMA
+        function startGame() {
+            UI.screens.start.classList.add('hidden'); 
+            UI.discordBtn.classList.add('hidden'); 
+            UI.instagramBtn.classList.add('hidden'); 
+            UI.flowBtn.classList.add('hidden');
+            UI.infoBtn.classList.add('hidden');
+            UI.pauseBtn.classList.remove('hidden');
+            UI.text.scoreBoard.innerText = "0"; UI.text.scoreBoard.style.display = "block";
+            state.isRunning = true; state.isGameOver = false; state.isPaused = false;
+            lastTime = performance.now(); // Zamanlayıcıyı başlat
+            requestAnimationFrame(loop);
+        }
+
+        function resetGame(isInitialLoad = false) {
+            currentSpeed = 2; 
+
+            bird.y = UI.canvas.height / 2 - 50; bird.velocity = 0; pipes.reset(); 
+            state.score = 0; state.frames = 0; state.isGameOver = false; state.isPaused = false;
+            Object.values(UI.screens).forEach(s => s.classList.add('hidden'));
+            UI.pauseBtn.classList.add('hidden');
+            
+            if(isInitialLoad) { 
+                UI.screens.start.classList.add('hidden'); 
+            } else { 
+                UI.screens.start.classList.remove('hidden'); 
+                UI.discordBtn.classList.remove('hidden'); 
+                UI.instagramBtn.classList.remove('hidden'); 
+                UI.flowBtn.classList.remove('hidden');
+                UI.infoBtn.classList.remove('hidden');
+                updateBirdImage();
+            }
+            UI.text.scoreBoard.innerText = "0";
+            if (bgImg.complete) ctx.drawImage(bgImg, 0, 0, UI.canvas.width, UI.canvas.height);
+            fg.draw(); bird.draw();
+        }
+
+        function retryGame() {
+            resetGame(true); 
+            startGame();     
+        }
+
+        function gameOver() {
+            state.isGameOver = true; state.isRunning = false;
+            state.totalCoins += state.score;
+            localStorage.setItem('flappyTotalCoins', state.totalCoins);
+            UI.text.totalCoins.innerText = state.totalCoins;
+            if(state.score > state.highScore) { state.highScore = state.score; localStorage.setItem('flappyHighScore', state.highScore); UI.text.highScore.innerText = state.highScore; }
+            UI.text.finalScore.innerText = state.score; UI.text.finalTotalCoins.innerText = state.totalCoins; UI.text.scoreBoard.style.display = "none";
+            UI.screens.gameOver.classList.remove('hidden'); 
+            UI.discordBtn.classList.remove('hidden'); 
+            UI.instagramBtn.classList.remove('hidden'); 
+            UI.flowBtn.classList.remove('hidden');
+            UI.infoBtn.classList.remove('hidden');
+            UI.pauseBtn.classList.add('hidden');
+        }
+
+        function openShop() { 
+            UI.screens.start.classList.add('hidden'); 
+            UI.screens.gameOver.classList.add('hidden'); 
+            UI.screens.shop.classList.remove('hidden'); 
+            UI.discordBtn.classList.add('hidden'); 
+            UI.instagramBtn.classList.add('hidden'); 
+            UI.flowBtn.classList.add('hidden');
+            UI.infoBtn.classList.add('hidden');
+            UI.text.shopCoins.innerText = state.totalCoins; 
+            renderShopItems(); 
+        }
+        function closeShop() { 
+            UI.screens.shop.classList.add('hidden'); 
+            UI.screens.start.classList.remove('hidden'); 
+            UI.discordBtn.classList.remove('hidden'); 
+            UI.instagramBtn.classList.remove('hidden'); 
+            UI.flowBtn.classList.remove('hidden');
+            UI.infoBtn.classList.remove('hidden');
+            resetGame(); 
+        }
+        
+        function renderShopItems() {
+            const container = document.getElementById('shop-container'); container.innerHTML = "";
+            const t = translations[settings.lang];
+            birdsData.forEach((item, index) => {
+                const isUnlocked = state.unlockedBirds[index]; const isSelected = (state.selectedBird === index);
+                const div = document.createElement('div'); div.className = `shop-item ${isSelected ? 'active' : ''}`;
+                let buttonHtml = isSelected ? `<button disabled style="background:#888;">${t.selected}</button>` : (isUnlocked ? `<button onclick="selectBird(${index})" class="btn-green">${t.select}</button>` : `<button onclick="buyBird(${index})">${t.buy} (${item.price})</button>`);
+                div.innerHTML = `<div class="selected-badge">✓</div><img src="${item.src}" alt="${item.name}"><div style="font-size:1.5vh; font-weight:bold; margin-bottom:5px;">${item.name}</div>${buttonHtml}`;
+                container.appendChild(div);
+            });
+        }
+        
+        function buyBird(index) { if (state.totalCoins >= birdsData[index].price) { state.totalCoins -= birdsData[index].price; state.unlockedBirds[index] = true; localStorage.setItem('flappyTotalCoins', state.totalCoins); localStorage.setItem('flappyUnlockedBirds', JSON.stringify(state.unlockedBirds)); UI.text.shopCoins.innerText = state.totalCoins; UI.text.totalCoins.innerText = state.totalCoins; renderShopItems(); } else { alert("Yetersiz Puan!"); } }
+        function selectBird(index) { state.selectedBird = index; localStorage.setItem('flappySelectedBird', index); updateBirdImage(); renderShopItems(); }
+        function openSettings() { UI.screens.start.classList.add('hidden'); UI.screens.settings.classList.remove('hidden'); UI.discordBtn.classList.add('hidden'); UI.instagramBtn.classList.add('hidden'); UI.flowBtn.classList.add('hidden'); UI.infoBtn.classList.add('hidden'); }
+        function closeSettings() { UI.screens.settings.classList.add('hidden'); UI.screens.start.classList.remove('hidden'); UI.discordBtn.classList.remove('hidden'); UI.instagramBtn.classList.remove('hidden'); UI.flowBtn.classList.remove('hidden'); UI.infoBtn.classList.remove('hidden'); }
+        function openAbout() { UI.screens.start.classList.add('hidden'); UI.screens.about.classList.remove('hidden'); UI.discordBtn.classList.add('hidden'); UI.instagramBtn.classList.add('hidden'); UI.flowBtn.classList.add('hidden'); UI.infoBtn.classList.add('hidden'); }
+        function closeAbout() { UI.screens.about.classList.add('hidden'); UI.screens.start.classList.remove('hidden'); UI.discordBtn.classList.remove('hidden'); UI.instagramBtn.classList.remove('hidden'); UI.flowBtn.classList.remove('hidden'); UI.infoBtn.classList.remove('hidden'); }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('keydown', e => { if (e.code === 'Space' && state.isRunning && !state.isPaused) bird.jump(); });
+        UI.canvas.addEventListener('mousedown', () => { if(state.isRunning && !state.isPaused) bird.jump(); });
+        UI.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if(state.isRunning && !state.isPaused) bird.jump(); }, {passive: false});
+
+        // Başlangıç
+        handleSplash();
+    </script>
+</body>
+</html>

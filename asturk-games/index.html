@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astürk Games</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="scanlines" aria-hidden="true"></div>
+<div id="scrim" class="scrim" hidden></div>
+
+<!-- ============ ÜST BAR ============ -->
+<header class="topbar">
+  <button id="menuToggle" class="menu-toggle" type="button" aria-label="Menüyü aç" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+
+  <a class="logo" href="#" data-nav="home">
+    <svg class="logo-mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="4" y="10" width="40" height="28" rx="3" fill="var(--panel-2)" stroke="var(--marquee)" stroke-width="2"/>
+      <rect x="9" y="15" width="30" height="14" rx="1.5" fill="var(--bg-void)"/>
+      <rect x="9" y="15" width="30" height="14" rx="1.5" fill="var(--cyan)" opacity="0.18"/>
+      <circle cx="16" cy="34" r="2.4" fill="var(--neon)"/>
+      <circle cx="24" cy="34" r="2.4" fill="var(--marquee)"/>
+      <circle cx="32" cy="34" r="2.4" fill="var(--cyan)"/>
+      <rect x="1" y="6" width="6" height="8" rx="1" fill="var(--marquee)"/>
+      <rect x="41" y="6" width="6" height="8" rx="1" fill="var(--neon)"/>
+    </svg>
+    <span class="logo-word">ASTÜRK<span class="logo-word-accent">GAMES</span></span>
+  </a>
+
+  <div class="topbar-search">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <input id="searchInput" type="text" placeholder="Oyun ara..." autocomplete="off">
+  </div>
+</header>
+
+<div class="layout" id="layoutShell">
+
+  <!-- ============ SOL MENÜ ============ -->
+  <aside id="sidebar" class="sidebar">
+    <nav class="side-nav">
+      <ul class="nav-group">
+        <li><a href="#" class="nav-link" data-nav="home"><span class="nav-icon">🏠</span>Anasayfa</a></li>
+        <li><a href="#" class="nav-link" data-nav="new"><span class="nav-icon">🆕</span>Yeni Eklenenler</a></li>
+        <li><a href="#" class="nav-link" data-nav="popular"><span class="nav-icon">🔥</span>Popüler</a></li>
+        <li><a href="#" class="nav-link" data-nav="all"><span class="nav-icon">🗂️</span>Tüm Oyunlar</a></li>
+      </ul>
+
+      <p class="nav-heading">Kategoriler</p>
+      <ul id="categoryNav" class="nav-group nav-group--categories">
+        <!-- script.js tarafından games.js'dan otomatik doldurulur -->
+      </ul>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>Astürk Games</span>
+      <span class="sidebar-footer-sub">kendi kasetlerinle büyür</span>
+    </div>
+  </aside>
+
+  <!-- ============ ANA İÇERİK ============ -->
+  <main id="view-library" class="content">
+
+    <section id="heroSection" class="hero" hidden>
+      <div class="hero-media" id="heroMedia"></div>
+      <div class="hero-info">
+        <span class="hero-eyebrow">ÖNE ÇIKAN KASET</span>
+        <h1 id="heroTitle" class="hero-title">—</h1>
+        <p id="heroTag" class="hero-tag"></p>
+        <button id="heroPlayBtn" class="play-btn" type="button">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M7 4v16l14-8L7 4Z" fill="currentColor"/></svg>
+          OYNA
+        </button>
+      </div>
+    </section>
+
+    <div id="sections"><!-- satırlar / grid script.js tarafından buraya render edilir --></div>
+
+    <div id="emptyState" class="empty-state" hidden>
+      <div class="empty-slot" aria-hidden="true"></div>
+      <p id="emptyText"><strong>Raf boş.</strong> <code>games/</code> klasörüne bir oyun ekleyip <code>games.js</code>’a kaydını düşünce burada belirir.</p>
+    </div>
+  </main>
+</div>
+
+<!-- ============ OYUN OYNATICI ============ -->
+<section id="view-player" class="player-view" hidden>
+  <div class="player-bar">
+    <button id="backBtn" class="eject-btn" type="button">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M12 5 4 15h16L12 5Z" fill="currentColor"/><rect x="4" y="18" width="16" height="2.5" rx="1" fill="currentColor"/></svg>
+      ÇIKAR
+    </button>
+    <div class="player-meta">
+      <span id="playerTitle" class="player-title">—</span>
+      <span id="playerPath" class="player-path"></span>
+    </div>
+    <button id="fullscreenBtn" class="fs-btn" type="button" title="Tam ekran">⛶</button>
+  </div>
+  <div class="crt-frame">
+    <iframe id="gameFrame" title="Oyun ekranı" allow="gamepad; fullscreen; autoplay" allowfullscreen></iframe>
+  </div>
+</section>
+
+<script src="games.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
